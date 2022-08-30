@@ -2,6 +2,7 @@ package gpt3tokenencoder
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
@@ -199,33 +200,15 @@ func regexp2FindAllString(re *regexp2.Regexp, s string) []string {
 	return matches
 }
 
-// func subArray(mainArr []string, smallerArr []string) int {
-// 	if len(mainArr) < len(smallerArr) {
-// 		return -1
-// 	}
+func indexOf(mainArr []string, wanted string, startingPoint int) int {
+	for i := startingPoint; i < len(mainArr); i += 1 {
+		if mainArr[i] == wanted {
+			return i
+		}
+	}
 
-// 	for i := range mainArr {
-// 		if i == len(mainArr)-len(smallerArr)+1 {
-// 			break
-// 		}
-// 		if mainArr[i] == smallerArr[0] {
-// 			// here we start seeing if the substring exists
-// 			ok := true
-// 			for j := range smallerArr {
-// 				if mainArr[i+j] != smallerArr[j] {
-// 					ok = false
-// 					break
-// 				}
-// 			}
-
-// 			if ok {
-// 				return i
-// 			}
-// 		}
-// 	}
-
-// 	return -1
-// }
+	return -1
+}
 
 func bpe(token string) string {
 	if val, ok := cache[token]; ok {
@@ -276,14 +259,16 @@ func bpe(token string) string {
 		i := 0
 
 		for i < len(word) {
-			// j := indexOf(word, first, i)
-			j := strings.Index(strings.Join(word[i:], ""), first)
+			j := indexOf(word, first, i)
 
-			for k := i; k < j; k += 1 {
-				if len(word[i+k]) > 1 {
-					j -= len(word[i+k]) - 1
-				}
-			}
+			fmt.Println(word)
+			// in golang, each char in a string can be of different lengths
+			// transform to rune for correct calculation (each char = 1 len)
+			// for k := i; k < j; k += 1 {
+			// 	if len(word[k]) > 1 {
+			// 		j = j - len(word[k]) + 1
+			// 	}
+			// }
 
 			// j := subArray(word[i:], strings.Split(first, ""))
 			if j == -1 {
@@ -291,7 +276,9 @@ func bpe(token string) string {
 				// new_word = strings.Join([]string{new_word, word[i:]}, "")
 				break
 			}
-			new_word = append(new_word, word[i:j]...)
+			if i < j {
+				new_word = append(new_word, word[i:j]...)
+			}
 			// new_word = strings.Join([]string{new_word, word[i:j]}, "")
 			i = j
 			if word[i] == first && i < len(word)-1 && word[i+1] == second {
@@ -302,6 +289,7 @@ func bpe(token string) string {
 				i = i + 1
 			}
 		}
+
 		word = new_word
 		if len(word) == 1 {
 			break
@@ -310,8 +298,8 @@ func bpe(token string) string {
 		}
 	}
 
-	cache[token] = strings.Join(word, "")
-	return strings.Join(word, "")
+	cache[token] = strings.Join(word, " ")
+	return cache[token]
 }
 
 func Encode(text string) []int32 {
@@ -331,8 +319,10 @@ func Encode(text string) []int32 {
 			arr := make([]int32, 0)
 
 			for _, v := range strings.Split(bpe(token), " ") {
+				fmt.Printf("%s", v)
 				arr = append(arr, encoder[v])
 			}
+			fmt.Printf("\n")
 			return arr
 		}()
 
